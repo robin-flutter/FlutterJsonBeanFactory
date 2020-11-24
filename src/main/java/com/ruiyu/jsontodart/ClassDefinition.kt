@@ -40,7 +40,8 @@ class ClassDefinition(private val name: String, private val privateFields: Boole
         return false
     }
 
-    fun _addTypeDef(typeDef: TypeDefinition, sb: StringBuffer) {
+    private fun addTypeDef(typeDef: TypeDefinition, sb: StringBuffer) {
+        sb.append("final ");
         if (typeDef.name == "Null") {
             sb.append("dynamic")
         } else {
@@ -63,13 +64,89 @@ class ClassDefinition(private val name: String, private val privateFields: Boole
                 //如果驼峰命名后不一致,才这样
                 if (fieldName != key) {
                     sb.append('\t')
-                    sb.append("@JSONField(name: \"${key}\")\n")
+                    sb.append("@JsonKey(name: '${key}')\n")
                 }
                 sb.append('\t')
-                _addTypeDef(f!!, sb)
+                addTypeDef(f!!, sb)
                 sb.append(" $fieldName;")
+                sb.append('\n')
                 return@map sb.toString()
             }.joinToString("\n")
+        }
+
+    val _defaultContructor: String
+        get() {
+            val sb = StringBuffer()
+            sb.append("\t")
+            sb.append(name).append("({")
+
+
+            fields.keys.map { key ->
+                val f = fields[key]
+                val fieldName = fixFieldName(key, f, privateFields)
+                sb.append("this.")
+                sb.append(fieldName)
+                sb.append(", ")
+                return@map sb.toString()
+            }
+            sb.setLength(sb.length - 2)
+            sb.append("});\n")
+
+            return sb.toString()
+        }
+
+    val _propsField: String
+        get() {
+            val sb = StringBuffer()
+
+            sb.append('\t')
+            sb.append("@override");
+            sb.append('\n')
+            sb.append("List<Object> get props => [")
+
+            fields.keys.map { key ->
+                val f = fields[key]
+                val fieldName = fixFieldName(key, f, privateFields)
+                sb.append(fieldName)
+                sb.append(", ")
+                return@map sb.toString()
+            }
+            sb.setLength(sb.length - 2)
+            sb.append("];\n")
+
+            return sb.toString()
+        }
+
+    val _stringify: String
+        get() {
+            val sb = StringBuffer()
+
+            sb.append('\t')
+            sb.append("@override\n\t");
+            sb.append("bool get stringify => true;\n")
+
+            return sb.toString()
+        }
+
+    val _fromJson: String
+        get() {
+            val sb = StringBuffer()
+
+            sb.append('\t')
+            sb.append("factory ${name}.fromJson(Map<String, dynamic> json) =>\n");
+            sb.append("_$${name}FromJson(json);\n")
+
+            return sb.toString()
+        }
+
+    val _toJson: String
+        get() {
+            val sb = StringBuffer()
+
+            sb.append('\t')
+            sb.append("Map<String, dynamic> toJson() => _\$${name}ToJson(this);\n");
+
+            return sb.toString()
         }
 
     val _gettersSetters: String
@@ -80,9 +157,9 @@ class ClassDefinition(private val name: String, private val privateFields: Boole
                 val privateFieldName = fixFieldName(key, f, true);
                 val sb = StringBuffer();
                 sb.append('\t');
-                _addTypeDef(f!!, sb);
+                addTypeDef(f!!, sb);
                 sb.append(" get $publicFieldName => $privateFieldName;\n\tset $publicFieldName(")
-                _addTypeDef(f, sb)
+                addTypeDef(f, sb)
                 sb.append(" $publicFieldName) => $privateFieldName = $publicFieldName;")
                 return@map sb.toString()
             }.joinToString("\n")
@@ -99,7 +176,7 @@ class ClassDefinition(private val name: String, private val privateFields: Boole
                 val f = fields[key];
                 val publicFieldName = fixFieldName(key, f, false);
                 val privateFieldName = fixFieldName(key, f, true);
-                _addTypeDef(f!!, sb);
+                addTypeDef(f!!, sb);
                 sb.append(" $publicFieldName")
                 if (i != len) {
                     sb.append(", ")
@@ -165,7 +242,7 @@ class ClassDefinition(private val name: String, private val privateFields: Boole
 //            "class $name {\n$_fieldList\n\n$_defaultPrivateConstructor\n\n$_gettersSetters\n\n$_jsonParseFunc\n\n$_jsonGenFunc\n}\n";
             ""
         } else {
-            "class $name with JsonConvert<${name}> {\n$_fieldList\n}\n";
+            "@JsonSerializable()\nclass $name extends Equatable {\n$_fieldList\n$_defaultContructor\n$_propsField\n$_stringify\n$_fromJson\n$_toJson}";
         }
     }
 }

@@ -93,14 +93,22 @@ class ModelGenerator(
         })
         val stringBuilder = StringBuilder()
         //导包
-        stringBuilder.append("import 'package:${pubSpecConfig?.name}/generated/json/base/json_convert_content.dart';")
+        //stringBuilder.append("import 'package:${pubSpecConfig?.name}/generated/json/base/json_convert_content.dart';")
+        stringBuilder.append("import 'package:equatable/equatable.dart';")
+        stringBuilder.append("\n")
+        stringBuilder.append("import 'package:json_annotation/json_annotation.dart';")
+        stringBuilder.append("\n")
+        stringBuilder.append("\n")
+
+        val fileName = collectInfo.transformInputClassNameToFileName()
+        stringBuilder.append("part '${fileName}.g.dart';")
+        stringBuilder.append("\n")
         stringBuilder.append("\n")
         //说明需要导包json_field.dart
-        if (classContent.contains("@JSONField(")) {
-            stringBuilder.append("import 'package:${pubSpecConfig?.name}/generated/json/base/json_field.dart';")
-            stringBuilder.append("\n")
-        }
-        stringBuilder.append("\n")
+//        if (classContent.contains("@JSONField(")) {
+//            stringBuilder.append("import 'package:${pubSpecConfig?.name}/generated/json/base/json_field.dart';")
+//            stringBuilder.append("\n")
+//        }
         stringBuilder.append(classContent)
         //生成helper类
 
